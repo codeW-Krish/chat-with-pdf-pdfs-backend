@@ -10,7 +10,7 @@ class ChatMessageModel extends Model
     protected $primaryKey = 'message_id';
     protected $useAutoIncrement = false;
     protected $returnType = 'object';
-    protected $allowedFields = ['message_id', 'session_id', 'sender', 'message_text', 'references', 'created_at'];
+    protected $allowedFields = ['message_id', 'session_id', 'sender', 'message_text', 'references_data', 'created_at'];
     protected $useSoftDeletes   = false;
     protected $protectFields    = true;
 
@@ -58,7 +58,7 @@ class ChatMessageModel extends Model
             'session_id' => $sessionId,
             'sender' => $sender,
             'message_text' => $messageText,
-            'references' => $references ? json_encode($references) : null
+            'references_data' => $references ? json_encode($references) : null
         ];
         
         if ($this->insert($data)) {

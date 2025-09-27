@@ -155,13 +155,20 @@ log_message('info', 'Retrieved ' . count($sessions) . ' sessions');
             
             // Send to Python AI server for processing
             $aiResponse = $this->sendToAI($message, $pdfIds, $userId, $sessionId);
+            log_message('info', 'AI Response received: ' . json_encode($aiResponse));
             
             // Save AI response
-            $references = $aiResponse['references'] ?? [];
+            $aiData = $aiResponse['data'] ?? $aiResponse; // Handle both response formats
+            $references = $aiData['references'] ?? [];
+            $aiAnswer = $aiData['answer'] ?? 'No response generated';
+            
+            log_message('info', 'AI Answer: ' . $aiAnswer);
+            log_message('info', 'References count: ' . count($references));
+            
             $this->chatMessageModel->addMessage(
                 $sessionId, 
                 'ai', 
-                $aiResponse['answer'], 
+                $aiAnswer, 
                 $references
             );
             
@@ -169,7 +176,7 @@ log_message('info', 'Retrieved ' . count($sessions) . ' sessions');
                 'status' => 'success',
                 'data' => [
                     'user_message' => $message,
-                    'ai_response' => $aiResponse['answer'],
+                    'ai_response' => $aiAnswer,
                     'references' => $references
                 ]
             ]);
@@ -187,20 +194,25 @@ log_message('info', 'Retrieved ' . count($sessions) . ' sessions');
     {
         try {
             $userId = $this->request->user->user_id;
+            log_message('info', 'Getting session ' . $sessionId . ' for user ' . $userId);
             
             // Verify session belongs to user
             $session = $this->chatSessionModel->where('session_id', $sessionId)
                                              ->where('user_id', $userId)
                                              ->first();
             if (!$session) {
+                log_message('error', 'Session not found or access denied: ' . $sessionId);
                 return $this->response->setJSON([
                     'status' => 'error',
                     'message' => 'Invalid session or access denied'
                 ])->setStatusCode(403);
             }
             
+            log_message('info', 'Session found, getting PDFs for session: ' . $sessionId);
+            
             // Get PDFs in this session
             $sessionPdfs = $this->chatSessionModel->getSessionPdfs($sessionId);
+            log_message('info', 'Found ' . count($sessionPdfs) . ' PDFs for session: ' . $sessionId);
             
             return $this->response->setJSON([
                 'status' => 'success',
@@ -211,10 +223,10 @@ log_message('info', 'Retrieved ' . count($sessions) . ' sessions');
             ]);
             
         } catch (\Exception $e) {
-            log_message('error', 'Get session error: ' . $e->getMessage());
+            log_message('error', 'Get session error: ' . $e->getMessage() . ' at line ' . $e->getLine() . ' in ' . $e->getFile());
             return $this->response->setJSON([
                 'status' => 'error',
-                'message' => 'Failed to retrieve session'
+                'message' => 'Failed to retrieve session: ' . $e->getMessage()
             ])->setStatusCode(500);
         }
     }
@@ -239,8 +251,10 @@ log_message('info', 'Retrieved ' . count($sessions) . ' sessions');
             
             // Decode references JSON
             foreach ($messages as $message) {
-                if ($message->references) {
-                    $message->references = json_decode($message->references, true);
+                if ($message->references_data) {
+                    $message->references = json_decode($message->references_data, true);
+                } else {
+                    $message->references = [];
                 }
             }
             
@@ -257,6 +271,61 @@ log_message('info', 'Retrieved ' . count($sessions) . ' sessions');
             return $this->response->setJSON([
                 'status' => 'error',
                 'message' => 'Failed to retrieve messages'
+            ])->setStatusCode(500);
+        }
+    }
+    
+    public function testDatabase()
+    {
+        try {
+            $db = \Config\Database::connect();
+            
+            // List all tables
+            $tables = $db->listTables();
+            
+            // Check specific tables
+            $hasChatMessages = in_array('chat_messages', $tables);
+            $hasChatSessions = in_array('chat_sessions', $tables);
+            $hasChatSessionPdfs = in_array('chat_session_pdfs', $tables);
+            
+            // Test queries
+            $chatMessagesCount = 0;
+            $chatSessionsCount = 0;
+            $chatSessionPdfsCount = 0;
+            
+            if ($hasChatMessages) {
+                $chatMessagesCount = $db->table('chat_messages')->countAllResults();
+            }
+            
+            if ($hasChatSessions) {
+                $chatSessionsCount = $db->table('chat_sessions')->countAllResults();
+            }
+            
+            if ($hasChatSessionPdfs) {
+                $chatSessionPdfsCount = $db->table('chat_session_pdfs')->countAllResults();
+            }
+            
+            return $this->response->setJSON([
+                'status' => 'success',
+                'message' => 'Database connection successful',
+                'tables' => $tables,
+                'table_checks' => [
+                    'chat_messages' => $hasChatMessages,
+                    'chat_sessions' => $hasChatSessions,
+                    'chat_session_pdfs' => $hasChatSessionPdfs
+                ],
+                'counts' => [
+                    'chat_messages' => $chatMessagesCount,
+                    'chat_sessions' => $chatSessionsCount,
+                    'chat_session_pdfs' => $chatSessionPdfsCount
+                ]
+            ]);
+            
+        } catch (\Exception $e) {
+            return $this->response->setJSON([
+                'status' => 'error',
+                'message' => 'Database error: ' . $e->getMessage(),
+                'trace' => $e->getTraceAsString()
             ])->setStatusCode(500);
         }
     }

@@ -89,13 +89,24 @@ class ChatSessionPdf extends Model
     
     public function getSessionPdfs($sessionId)
     {
-        $db = \Config\Database::connect();
-        return $db->table('chat_session_pdfs csp')
-                 ->select('p.*')
-                 ->join('pdfs p', 'p.pdf_id = csp.pdf_id')
-                 ->where('csp.session_id', $sessionId)
-                 ->get()
-                 ->getResult();
+        try {
+            $db = \Config\Database::connect();
+            log_message('info', 'Getting PDFs for session: ' . $sessionId);
+            
+            $result = $db->table('chat_session_pdfs csp')
+                         ->select('p.*')
+                         ->join('pdfs p', 'p.pdf_id = csp.pdf_id')
+                         ->where('csp.session_id', $sessionId)
+                         ->get()
+                         ->getResult();
+            
+            log_message('info', 'Found ' . count($result) . ' PDFs for session: ' . $sessionId);
+            return $result;
+            
+        } catch (\Exception $e) {
+            log_message('error', 'Error getting session PDFs: ' . $e->getMessage() . ' at line ' . $e->getLine() . ' in ' . $e->getFile());
+            return [];
+        }
     }
     
     private function generateUuid()

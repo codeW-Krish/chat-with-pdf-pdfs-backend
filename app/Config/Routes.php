@@ -26,6 +26,7 @@ $routes->options('(:any)', function($any) {
 
 $routes->get('/', [Home::class, 'index']);
 $routes->get('public/test-python-quick', [PdfController::class, 'testPythonQuick']);
+$routes->get('public/test-db', [ChatController::class, 'testDatabase']);
 
 /**
  * =========================================
@@ -59,4 +60,5 @@ $routes->group('api', ['filter' => ['cors', 'jwtauth']], static function($routes
     $routes->get('chat/sessions/(:segment)', [ChatController::class, 'getSession/$1']);
     $routes->get('chat/sessions/(:segment)/messages', [ChatController::class, 'getSessionMessages/$1']);
     $routes->post('chat/message', [ChatController::class, 'sendMessage']);
+    $routes->get('chat/test-db', [ChatController::class, 'testDatabase']);
 });
