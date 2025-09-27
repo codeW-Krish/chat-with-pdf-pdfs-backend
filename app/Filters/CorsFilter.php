@@ -1,29 +1,53 @@
 <?php
 namespace App\Filters;
 
+use CodeIgniter\Filters\FilterInterface;
 use CodeIgniter\HTTP\RequestInterface;
 use CodeIgniter\HTTP\ResponseInterface;
-use CodeIgniter\Filters\FilterInterface;
+use Config\Services;
+use Config\Cors as CorsConfig;
 
 class CorsFilter implements FilterInterface
 {
     public function before(RequestInterface $request, $arguments = null)
     {
-        $response = service('response');
-        $origin = $request->getHeaderLine('Origin') ?: '*';
+        $config = new CorsConfig();
+        $cors = $config->default;
 
-        $response->setHeader('Access-Control-Allow-Origin', $origin);
-        $response->setHeader('Access-Control-Allow-Credentials', 'true');
-        $response->setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
-        $response->setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With');
-
-        if ($request->getMethod() === 'options') {
-            return $response->setStatusCode(200)->send();
+        // Handle preflight OPTIONS request
+        if (strtoupper($request->getMethod()) === 'OPTIONS') {
+            $response = Services::response();
+            $response->setHeader('Access-Control-Allow-Origin', implode(', ', $cors['allowedOrigins']));
+            $response->setHeader('Access-Control-Allow-Methods', implode(', ', $cors['allowedMethods']));
+            $response->setHeader('Access-Control-Allow-Headers', implode(', ', $cors['allowedHeaders']));
+            $response->setHeader('Access-Control-Allow-Credentials', $cors['supportsCredentials'] ? 'true' : 'false');
+            $response->setHeader('Access-Control-Max-Age', $cors['maxAge']);
+            $response->setStatusCode(204);
+            return $response;
         }
+
+        // For normal requests, set CORS headers (after filter will also set them)
+        $response = Services::response();
+        $response->setHeader('Access-Control-Allow-Origin', implode(', ', $cors['allowedOrigins']));
+        $response->setHeader('Access-Control-Allow-Methods', implode(', ', $cors['allowedMethods']));
+        $response->setHeader('Access-Control-Allow-Headers', implode(', ', $cors['allowedHeaders']));
+        $response->setHeader('Access-Control-Allow-Credentials', $cors['supportsCredentials'] ? 'true' : 'false');
+
+        // Continue processing
+        return $request;
     }
 
     public function after(RequestInterface $request, ResponseInterface $response, $arguments = null)
     {
-        // nothing needed here
+        // Ensure CORS headers are present on the response
+        $config = new CorsConfig();
+        $cors = $config->default;
+
+        $response->setHeader('Access-Control-Allow-Origin', implode(', ', $cors['allowedOrigins']));
+        $response->setHeader('Access-Control-Allow-Methods', implode(', ', $cors['allowedMethods']));
+        $response->setHeader('Access-Control-Allow-Headers', implode(', ', $cors['allowedHeaders']));
+        $response->setHeader('Access-Control-Allow-Credentials', $cors['supportsCredentials'] ? 'true' : 'false');
+
+        return $response;
     }
 }

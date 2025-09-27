@@ -39,11 +39,13 @@ class Auth extends BaseController
     // }
     // -----------------------------------
 
-    public function register()
-    {
+    public function register(){
         // $this->handleCors(); // Apply CORS headers
 
         $data = $this->request->getJSON(true);
+        
+        // Add debug logging
+        log_message('debug', 'Registration attempt: ' . print_r($data, true));
 
         // Validation
         $validation = Services::validation();
@@ -52,8 +54,16 @@ class Auth extends BaseController
             'password' => 'required|min_length[8]',
             'name' => 'required'
         ]);
+        // Ensure the request is JSON
+        if (empty($this->request->getHeaderLine('Content-Type')) || strpos($this->request->getHeaderLine('Content-Type'), 'application/json') === false) {
+            return $this->response->setJSON([
+                'status' => 'error',
+                'message' => 'Content-Type must be application/json'
+            ])->setStatusCode(400);
+        }
 
         if (!$validation->run($data)) {
+            log_message('debug', 'Validation failed: ' . print_r($validation->getErrors(), true));
             return $this->response->setJSON([
                 'status' => 'error',
                 'message' => 'Validation failed',
@@ -69,11 +79,24 @@ class Auth extends BaseController
             'name' => $data['name']
         ];
 
-        $this->userModel->insert($userData);
+        log_message('debug', 'Attempting to insert user: ' . print_r($userData, true));
+        
+        try {
+            $result = $this->userModel->insert($userData);
+            log_message('debug', 'User insert result: ' . $result);
+        } catch (\Exception $e) {
+            log_message('error', 'User insertion failed: ' . $e->getMessage());
+            return $this->response->setJSON([
+                'status' => 'error',
+                'message' => 'Database error: ' . $e->getMessage()
+            ])->setStatusCode(500);
+        }
 
         // Generate tokens
         $tokens = $this->generateTokens($userData['user_id']);
 
+        log_message('debug', 'Registration successful for user: ' . $userData['email']);
+        
         return $this->response->setJSON([
             'status' => 'success',
             'message' => 'User registered successfully',
@@ -229,5 +252,38 @@ class Auth extends BaseController
             mt_rand(0, 0x3fff) | 0x8000, mt_rand(0, 0xffff),
             mt_rand(0, 0xffff), mt_rand(0, 0xffff)
         );
+    }
+    // In your AuthController or any controller
+    public function testDb()
+    {
+        try {
+            $db = \Config\Database::connect();
+            $result = $db->query('SELECT version() as version')->getRow();
+            
+            // Test if we can insert a user
+            $testData = [
+                'user_id' => $this->generateUuid(),
+                'email' => 'test@test.com',
+                'password_hash' => password_hash('test', PASSWORD_DEFAULT),
+                'name' => 'Test User'
+            ];
+            
+            $db->table('users')->insert($testData);
+            $insertId = $db->insertID();
+            
+            return $this->response->setJSON([
+                'status' => 'success',
+                'message' => 'Database connection OK',
+                'data' => [
+                    'version' => $result->version,
+                    'insert_id' => $insertId
+                ]
+            ]);
+        } catch (\Exception $e) {
+            return $this->response->setJSON([
+                'status' => 'error',
+                'message' => 'Database error: ' . $e->getMessage()
+            ])->setStatusCode(500);
+        }
     }
 }

@@ -3,7 +3,7 @@ namespace App\Controllers;
 
 use App\Controllers\BaseController;
 use CodeIgniter\HTTP\ResponseInterface;
-use App\Models\ChatSessionModel;
+use App\Models\ChatSessionPdf;
 use App\Models\ChatMessageModel;
 use App\Models\PdfModel;
 use Config\Services;
@@ -16,7 +16,7 @@ class ChatController extends BaseController
     
     public function __construct()
     {
-        $this->chatSessionModel = new ChatSessionModel();
+        $this->chatSessionModel = new ChatSessionPdf();
         $this->chatMessageModel = new ChatMessageModel();
         $this->pdfModel = new PdfModel();
         helper('text');
@@ -71,30 +71,46 @@ class ChatController extends BaseController
         }
     }
     
-    public function getSessions()
-    {
-        try {
-            $userId = $this->request->user->user_id;
-            $sessions = $this->chatSessionModel->getUserSessions($userId);
-            
-            // Get PDF count for each session
-            foreach ($sessions as $session) {
-                $session->pdf_count = count($this->chatSessionModel->getSessionPdfs($session->session_id));
+public function getSessions()
+{
+    try {
+        $userId = $this->request->user->user_id;
+        log_message('info', 'Getting sessions for user: ' . $userId);
+        
+$sessions = $this->chatSessionModel->getUserSessions($userId) ?: [];
+log_message('info', 'Retrieved ' . count($sessions) . ' sessions');
+        
+        // Get PDF count for each session
+        foreach ($sessions as $session) {
+            try {
+                if (empty($session->session_id)) {
+                    log_message('error', 'Session ID is empty for session: ' . json_encode($session));
+                    $session->pdf_count = 0;
+                    continue;
+                }
+                
+                $pdfs = $this->chatSessionModel->getSessionPdfs($session->session_id);
+                $session->pdf_count = count($pdfs);
+                log_message('info', 'Session ' . $session->session_id . ' has ' . $session->pdf_count . ' PDFs');
+            } catch (\Exception $e) {
+                log_message('error', 'Error getting PDFs for session ' . $session->session_id . ': ' . $e->getMessage());
+                $session->pdf_count = 0;
             }
-            
-            return $this->response->setJSON([
-                'status' => 'success',
-                'data' => $sessions
-            ]);
-            
-        } catch (\Exception $e) {
-            log_message('error', 'Get sessions error: ' . $e->getMessage());
-            return $this->response->setJSON([
-                'status' => 'error',
-                'message' => 'Failed to retrieve chat sessions'
-            ])->setStatusCode(500);
         }
+        
+        return $this->response->setJSON([
+            'status' => 'success',
+            'data' => $sessions
+        ]);
+        
+    } catch (\Exception $e) {
+        log_message('error', 'Get sessions error: ' . $e->getMessage() . ' at line ' . $e->getLine() . ' in ' . $e->getFile());
+        return $this->response->setJSON([
+            'status' => 'error',
+            'message' => 'Failed to retrieve chat sessions: ' . $e->getMessage()
+        ])->setStatusCode(500);
     }
+}
     
     public function sendMessage()
     {
@@ -163,6 +179,42 @@ class ChatController extends BaseController
             return $this->response->setJSON([
                 'status' => 'error',
                 'message' => 'Failed to send message: ' . $e->getMessage()
+            ])->setStatusCode(500);
+        }
+    }
+    
+    public function getSession($sessionId)
+    {
+        try {
+            $userId = $this->request->user->user_id;
+            
+            // Verify session belongs to user
+            $session = $this->chatSessionModel->where('session_id', $sessionId)
+                                             ->where('user_id', $userId)
+                                             ->first();
+            if (!$session) {
+                return $this->response->setJSON([
+                    'status' => 'error',
+                    'message' => 'Invalid session or access denied'
+                ])->setStatusCode(403);
+            }
+            
+            // Get PDFs in this session
+            $sessionPdfs = $this->chatSessionModel->getSessionPdfs($sessionId);
+            
+            return $this->response->setJSON([
+                'status' => 'success',
+                'data' => [
+                    'session' => $session,
+                    'pdfs' => $sessionPdfs
+                ]
+            ]);
+            
+        } catch (\Exception $e) {
+            log_message('error', 'Get session error: ' . $e->getMessage());
+            return $this->response->setJSON([
+                'status' => 'error',
+                'message' => 'Failed to retrieve session'
             ])->setStatusCode(500);
         }
     }

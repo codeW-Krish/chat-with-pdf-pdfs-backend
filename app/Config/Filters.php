@@ -20,7 +20,7 @@ class Filters extends BaseFilters
         'honeypot'   => Honeypot::class,
         'invalidchars'=> InvalidChars::class,
         'secureheaders'=> SecureHeaders::class,
-        'cors'       => \CodeIgniter\Filters\Cors::class, // <-- make sure this exists
+        'cors'    => \App\Filters\CorsFilter::class, // <-- make sure this exists
         'forcehttps' => ForceHTTPS::class,
         'pagecache'  => PageCache::class,
         'performance'=> PerformanceMetrics::class,
@@ -38,5 +38,15 @@ class Filters extends BaseFilters
     ];
 
     public array $methods = [];
-    public array $filters = [];
+    public array $filters = [
+        'cors' => [
+            'before' => ['auth/*', 'api/*', 'public/*'],
+            'after' => ['auth/*', 'api/*', 'public/*']
+        ],
+        'jwtauth' => [
+            'before' => ['api/*'],
+            'after' => ['api/*']
+        ]
+    ];
+    
 }

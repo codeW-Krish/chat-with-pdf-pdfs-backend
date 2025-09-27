@@ -1,5 +1,4 @@
 <?php
-
 use CodeIgniter\Router\RouteCollection;
 use App\Controllers\Auth;
 use App\Controllers\PdfController;
@@ -15,31 +14,18 @@ $routes->get('public/health', function() {
     return service('response')->setJSON(['status' => 'healthy', 'service' => 'PHP Backend']);
 });
 
+$routes->options('(:any)', function($any) {
+    $response = service('response');
+    $response->setHeader('Access-Control-Allow-Origin', 'http://localhost:3000')
+             ->setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS')
+             ->setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With')
+             ->setHeader('Access-Control-Allow-Credentials', 'true')
+             ->setStatusCode(204);
+    return $response;
+});
+
 $routes->get('/', [Home::class, 'index']);
 $routes->get('public/test-python-quick', [PdfController::class, 'testPythonQuick']);
-
-/**
- * =========================================
- * CORS PRE-FLIGHT OPTIONS HANDLERS
- * =========================================
- */
-$routes->options('auth/(:any)', static function() {
-    return service('response')->setStatusCode(204)
-        ->setHeader('Access-Control-Allow-Origin', 'http://localhost:3000')
-        ->setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS')
-        ->setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization')
-        ->setHeader('Access-Control-Allow-Credentials', 'true')
-        ->setBody('');
-});
-
-$routes->options('api/(:any)', static function() {
-    return service('response')->setStatusCode(204)
-        ->setHeader('Access-Control-Allow-Origin', 'http://localhost:3000')
-        ->setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS')
-        ->setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization')
-        ->setHeader('Access-Control-Allow-Credentials', 'true')
-        ->setBody('');
-});
 
 /**
  * =========================================
@@ -50,6 +36,8 @@ $routes->group('', ['filter' => 'cors'], static function($routes) {
     $routes->post('auth/register', [Auth::class, 'register']);
     $routes->post('auth/login', [Auth::class, 'login']);
     $routes->post('auth/refresh', [Auth::class, 'refresh']);
+    $routes->post('auth/logout', [Auth::class, 'logout']); // Add this
+    $routes->get('auth/test-db', [Auth::class, 'testDb']);
 });
 
 /**
@@ -57,7 +45,7 @@ $routes->group('', ['filter' => 'cors'], static function($routes) {
  * PROTECTED API ROUTES (JWT required)
  * =========================================
  */
-$routes->group('api', ['filter' => 'jwtauth'], static function($routes) {
+$routes->group('api', ['filter' => ['cors', 'jwtauth']], static function($routes) { // Add cors filter here too
     // PDF routes
     $routes->post('pdfs/upload', [PdfController::class, 'upload']);
     $routes->get('pdfs', [PdfController::class, 'getUserPdfs']);
@@ -68,6 +56,7 @@ $routes->group('api', ['filter' => 'jwtauth'], static function($routes) {
     // Chat routes
     $routes->post('chat/sessions', [ChatController::class, 'createSession']);
     $routes->get('chat/sessions', [ChatController::class, 'getSessions']);
+    $routes->get('chat/sessions/(:segment)', [ChatController::class, 'getSession/$1']);
     $routes->get('chat/sessions/(:segment)/messages', [ChatController::class, 'getSessionMessages/$1']);
     $routes->post('chat/message', [ChatController::class, 'sendMessage']);
 });

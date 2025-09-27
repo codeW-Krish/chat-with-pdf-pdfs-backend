@@ -13,13 +13,24 @@ class JWTAuth implements FilterInterface
 {
     public function before(RequestInterface $request, $arguments = null)
     {
+        // Add CORS headers first
+        $response = Services::response();
+        $response->setHeader('Access-Control-Allow-Origin', 'http://localhost:3000')
+                 ->setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS')
+                 ->setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With')
+                 ->setHeader('Access-Control-Allow-Credentials', 'true');
+
         $authHeader = $request->getHeaderLine('Authorization');
         
         if (empty($authHeader)) {
-            return Services::response()->setJSON([
-                'status' => 'error',
-                'message' => 'Authorization header required'
-            ])->setStatusCode(401);
+$response->setHeader('Access-Control-Allow-Origin', 'http://localhost:3000')
+         ->setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS')
+         ->setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With')
+         ->setHeader('Access-Control-Allow-Credentials', 'true');
+return $response->setJSON([
+    'status' => 'error',
+    'message' => 'Authorization header required'
+])->setStatusCode(401);
         }
         
         if (preg_match('/Bearer\s(\S+)/', $authHeader, $matches)) {
@@ -33,21 +44,35 @@ class JWTAuth implements FilterInterface
                 $request->user = $decoded;
                 
             } catch (\Exception $e) {
-                return Services::response()->setJSON([
-                    'status' => 'error',
-                    'message' => 'Invalid or expired token'
-                ])->setStatusCode(401);
+$response->setHeader('Access-Control-Allow-Origin', 'http://localhost:3000')
+         ->setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS')
+         ->setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With')
+         ->setHeader('Access-Control-Allow-Credentials', 'true');
+return $response->setJSON([
+    'status' => 'error',
+    'message' => 'Invalid or expired token'
+])->setStatusCode(401);
             }
         } else {
-            return Services::response()->setJSON([
-                'status' => 'error',
-                'message' => 'Invalid authorization format'
-            ])->setStatusCode(401);
+$response->setHeader('Access-Control-Allow-Origin', 'http://localhost:3000')
+         ->setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS')
+         ->setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With')
+         ->setHeader('Access-Control-Allow-Credentials', 'true');
+return $response->setJSON([
+    'status' => 'error',
+    'message' => 'Invalid authorization format'
+])->setStatusCode(401);
         }
     }
 
     public function after(RequestInterface $request, ResponseInterface $response, $arguments = null)
     {
-        // Do nothing
+        // Add CORS headers to response
+        $response->setHeader('Access-Control-Allow-Origin', 'http://localhost:3000')
+                 ->setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS')
+                 ->setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With')
+                 ->setHeader('Access-Control-Allow-Credentials', 'true');
+        
+        return $response;
     }
 }

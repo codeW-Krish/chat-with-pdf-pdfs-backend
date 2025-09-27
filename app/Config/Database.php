@@ -68,8 +68,20 @@ public array $default = [
     {
         parent::__construct();
 
-        // $this->default['DSN']      = env('database.default.DSN');
-        // $this->default['DBDriver'] = env('database.default.DBDriver', 'postgre');
+        $this->default['DSN']      = env('database.default.DSN');
+        $this->default['DBDriver'] = env('database.default.DBDriver', 'Postgre');
+        
+        // // Fetch database connection details from the .env file
+        // $this->default['hostname'] = env('database.default.hostname');
+        // $this->default['username'] = env('database.default.username');
+        // $this->default['password'] = env('database.default.password');
+        // $this->default['database'] = env('database.default.database');
+        // $this->default['port']     = env('database.default.port', 5432); // Default to 5432 if not set
+
+        // // Set SSL and options from .env if present
+        // $this->default['DBDriver'] = env('database.default.DBDriver', 'Postgre');
+        // $this->default['sslmode']  = env('database.default.sslmode', 'require');
+        // $this->default['options']  = env('database.default.options', '');
 
         // Use tests group if running PHPUnit tests
         if (ENVIRONMENT === 'testing') {

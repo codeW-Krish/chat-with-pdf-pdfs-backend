@@ -10,18 +10,18 @@ class PythonAPIClient
         $this->baseUrl = getenv('PYTHON_SERVER_URL') ?: 'http://localhost:5000';
     }
     
-    public function processPdf($pdfId, $pdfPath, $userId)
-    {
-        $url = $this->baseUrl . '/process-pdf';
-        
-        $postData = [
-            'pdf_file' => new \CURLFile($pdfPath),
-            'pdf_id' => $pdfId,
-            'user_id' => $userId
-        ];
-        
-        return $this->sendRequest($url, $postData, true);
-    }
+public function processPdf($pdfId, $pdfPath, $userId)
+{
+    $url = $this->baseUrl . '/process-pdf';
+    
+    $postData = [
+        'pdf_id' => $pdfId,
+        'pdf_path' => $pdfPath,
+        'user_id' => $userId
+    ];
+    
+    return $this->sendRequest($url, $postData, false);
+}
     
     public function chat($question, $pdfIds, $userId, $sessionId = null)
     {

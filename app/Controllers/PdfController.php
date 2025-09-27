@@ -75,7 +75,7 @@ class PdfController extends BaseController
 
         // Generate unique filename for storage
         $newName = $pdfFile->getRandomName();
-        $uploadDir = WRITEPATH . 'uploads/pdfs/';
+        $uploadDir = WRITEPATH . 'uploads' . DIRECTORY_SEPARATOR . 'pdfs' . DIRECTORY_SEPARATOR;
 
         if (!is_dir($uploadDir)) {
             mkdir($uploadDir, 0777, true);
