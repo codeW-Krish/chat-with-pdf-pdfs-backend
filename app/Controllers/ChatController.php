@@ -153,8 +153,12 @@ log_message('info', 'Retrieved ' . count($sessions) . ' sessions');
             // Save user message
             $this->chatMessageModel->addMessage($sessionId, 'user', $message);
             
+            // Get conversation history for context
+            $conversationHistory = $this->getConversationHistory($sessionId);
+            log_message('info', 'Conversation history length: ' . count($conversationHistory));
+            
             // Send to Python AI server for processing
-            $aiResponse = $this->sendToAI($message, $pdfIds, $userId, $sessionId);
+            $aiResponse = $this->sendToAI($message, $pdfIds, $userId, $sessionId, $conversationHistory);
             log_message('info', 'AI Response received: ' . json_encode($aiResponse));
             
             // Save AI response
@@ -330,7 +334,28 @@ log_message('info', 'Retrieved ' . count($sessions) . ' sessions');
         }
     }
     
-    private function sendToAI($question, $pdfIds, $userId, $sessionId)
+    private function getConversationHistory($sessionId, $limit = 10)
+    {
+        try {
+            $messages = $this->chatMessageModel->getSessionMessages($sessionId, $limit);
+            $history = [];
+            
+            foreach ($messages as $message) {
+                $history[] = [
+                    'sender' => $message->sender,
+                    'message_text' => $message->message_text,
+                    'created_at' => $message->created_at
+                ];
+            }
+            
+            return $history;
+        } catch (\Exception $e) {
+            log_message('error', 'Error getting conversation history: ' . $e->getMessage());
+            return [];
+        }
+    }
+    
+    private function sendToAI($question, $pdfIds, $userId, $sessionId, $conversationHistory = [])
     {
         $pythonServerUrl = getenv('PYTHON_SERVER_URL') ?: 'http://localhost:5000';
         
@@ -338,7 +363,8 @@ log_message('info', 'Retrieved ' . count($sessions) . ' sessions');
             'question' => $question,
             'pdf_ids' => $pdfIds,
             'user_id' => $userId,
-            'session_id' => $sessionId
+            'session_id' => $sessionId,
+            'conversation_history' => $conversationHistory
         ]);
         
         $ch = curl_init();
@@ -347,7 +373,8 @@ log_message('info', 'Retrieved ' . count($sessions) . ' sessions');
             CURLOPT_POST => true,
             CURLOPT_POSTFIELDS => $postData,
             CURLOPT_RETURNTRANSFER => true,
-            CURLOPT_TIMEOUT => 60,
+            CURLOPT_TIMEOUT => 120, // Increased timeout for Groq API retries
+            CURLOPT_CONNECTTIMEOUT => 30,
             CURLOPT_HTTPHEADER => [
                 'Content-Type: application/json'
             ]

@@ -23,14 +23,14 @@ class JWTAuth implements FilterInterface
         $authHeader = $request->getHeaderLine('Authorization');
         
         if (empty($authHeader)) {
-$response->setHeader('Access-Control-Allow-Origin', 'http://localhost:3000')
-         ->setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS')
-         ->setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With')
-         ->setHeader('Access-Control-Allow-Credentials', 'true');
-return $response->setJSON([
-    'status' => 'error',
-    'message' => 'Authorization header required'
-])->setStatusCode(401);
+            $response->setHeader('Access-Control-Allow-Origin', 'http://localhost:3000')
+                     ->setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS')
+                     ->setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With')
+                     ->setHeader('Access-Control-Allow-Credentials', 'true');
+            return $response->setJSON([
+                'status' => 'error',
+                'message' => 'Authorization header required'
+            ])->setStatusCode(401);
         }
         
         if (preg_match('/Bearer\s(\S+)/', $authHeader, $matches)) {
@@ -44,24 +44,24 @@ return $response->setJSON([
                 $request->user = $decoded;
                 
             } catch (\Exception $e) {
-$response->setHeader('Access-Control-Allow-Origin', 'http://localhost:3000')
-         ->setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS')
-         ->setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With')
-         ->setHeader('Access-Control-Allow-Credentials', 'true');
-return $response->setJSON([
-    'status' => 'error',
-    'message' => 'Invalid or expired token'
-])->setStatusCode(401);
+                $response->setHeader('Access-Control-Allow-Origin', 'http://localhost:3000')
+                         ->setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS')
+                         ->setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With')
+                         ->setHeader('Access-Control-Allow-Credentials', 'true');
+                return $response->setJSON([
+                    'status' => 'error',
+                    'message' => 'Invalid or expired token'
+                ])->setStatusCode(401);
             }
         } else {
-$response->setHeader('Access-Control-Allow-Origin', 'http://localhost:3000')
-         ->setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS')
-         ->setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With')
-         ->setHeader('Access-Control-Allow-Credentials', 'true');
-return $response->setJSON([
-    'status' => 'error',
-    'message' => 'Invalid authorization format'
-])->setStatusCode(401);
+            $response->setHeader('Access-Control-Allow-Origin', 'http://localhost:3000')
+                     ->setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS')
+                     ->setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With')
+                     ->setHeader('Access-Control-Allow-Credentials', 'true');
+            return $response->setJSON([
+                'status' => 'error',
+                'message' => 'Invalid authorization format'
+            ])->setStatusCode(401);
         }
     }
 

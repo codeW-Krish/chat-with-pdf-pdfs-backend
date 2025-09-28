@@ -56,6 +56,12 @@ class Auth extends BaseController
         ]);
         // Ensure the request is JSON
         if (empty($this->request->getHeaderLine('Content-Type')) || strpos($this->request->getHeaderLine('Content-Type'), 'application/json') === false) {
+            // Add CORS headers
+            $this->response->setHeader('Access-Control-Allow-Origin', 'http://localhost:3000')
+                ->setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS')
+                ->setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With')
+                ->setHeader('Access-Control-Allow-Credentials', 'true');
+                
             return $this->response->setJSON([
                 'status' => 'error',
                 'message' => 'Content-Type must be application/json'
@@ -64,6 +70,12 @@ class Auth extends BaseController
 
         if (!$validation->run($data)) {
             log_message('debug', 'Validation failed: ' . print_r($validation->getErrors(), true));
+            // Add CORS headers
+            $this->response->setHeader('Access-Control-Allow-Origin', 'http://localhost:3000')
+                ->setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS')
+                ->setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With')
+                ->setHeader('Access-Control-Allow-Credentials', 'true');
+                
             return $this->response->setJSON([
                 'status' => 'error',
                 'message' => 'Validation failed',
@@ -86,6 +98,12 @@ class Auth extends BaseController
             log_message('debug', 'User insert result: ' . $result);
         } catch (\Exception $e) {
             log_message('error', 'User insertion failed: ' . $e->getMessage());
+            // Add CORS headers
+            $this->response->setHeader('Access-Control-Allow-Origin', 'http://localhost:3000')
+                ->setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS')
+                ->setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With')
+                ->setHeader('Access-Control-Allow-Credentials', 'true');
+                
             return $this->response->setJSON([
                 'status' => 'error',
                 'message' => 'Database error: ' . $e->getMessage()
@@ -97,6 +115,12 @@ class Auth extends BaseController
 
         log_message('debug', 'Registration successful for user: ' . $userData['email']);
         
+        // Add CORS headers
+        $this->response->setHeader('Access-Control-Allow-Origin', 'http://localhost:3000')
+            ->setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS')
+            ->setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With')
+            ->setHeader('Access-Control-Allow-Credentials', 'true');
+
         return $this->response->setJSON([
             'status' => 'success',
             'message' => 'User registered successfully',
@@ -120,6 +144,12 @@ class Auth extends BaseController
         $user = $this->userModel->where('email', $data['email'])->first();
 
         if (!$user || !password_verify($data['password'], $user->password_hash)) {
+            // Add CORS headers
+            $this->response->setHeader('Access-Control-Allow-Origin', 'http://localhost:3000')
+                ->setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS')
+                ->setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With')
+                ->setHeader('Access-Control-Allow-Credentials', 'true');
+                
             return $this->response->setJSON([
                 'status' => 'error',
                 'message' => 'Invalid email or password'
@@ -127,6 +157,12 @@ class Auth extends BaseController
         }
 
         $tokens = $this->generateTokens($user->user_id);
+
+        // Add CORS headers
+        $this->response->setHeader('Access-Control-Allow-Origin', 'http://localhost:3000')
+            ->setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS')
+            ->setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With')
+            ->setHeader('Access-Control-Allow-Credentials', 'true');
 
         return $this->response->setJSON([
             'status' => 'success',
@@ -150,6 +186,12 @@ class Auth extends BaseController
         $refreshToken = $data['refresh_token'] ?? null;
 
         if (!$refreshToken) {
+            // Add CORS headers
+            $this->response->setHeader('Access-Control-Allow-Origin', 'http://localhost:3000')
+                ->setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS')
+                ->setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With')
+                ->setHeader('Access-Control-Allow-Credentials', 'true');
+                
             return $this->response->setJSON([
                 'status' => 'error',
                 'message' => 'Refresh token required'
@@ -157,6 +199,12 @@ class Auth extends BaseController
         }
 
         $this->refreshTokenModel->where('refresh_token', $refreshToken)->delete();
+
+        // Add CORS headers
+        $this->response->setHeader('Access-Control-Allow-Origin', 'http://localhost:3000')
+            ->setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS')
+            ->setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With')
+            ->setHeader('Access-Control-Allow-Credentials', 'true');
 
         return $this->response->setJSON([
             'status' => 'success',
@@ -172,6 +220,12 @@ class Auth extends BaseController
         $refreshToken = $data['refresh_token'] ?? null;
 
         if (!$refreshToken) {
+            // Add CORS headers
+            $this->response->setHeader('Access-Control-Allow-Origin', 'http://localhost:3000')
+                ->setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS')
+                ->setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With')
+                ->setHeader('Access-Control-Allow-Credentials', 'true');
+                
             return $this->response->setJSON([
                 'status' => 'error',
                 'message' => 'Refresh token required'
@@ -188,6 +242,12 @@ class Auth extends BaseController
                 ->first();
 
             if (!$stored || strtotime($stored['expires_at']) < time()) {
+                // Add CORS headers
+                $this->response->setHeader('Access-Control-Allow-Origin', 'http://localhost:3000')
+                    ->setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS')
+                    ->setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With')
+                    ->setHeader('Access-Control-Allow-Credentials', 'true');
+                    
                 return $this->response->setJSON([
                     'status' => 'error',
                     'message' => 'Refresh token invalid or expired'
@@ -198,12 +258,24 @@ class Auth extends BaseController
 
             $tokens = $this->generateTokens($userId);
 
+            // Add CORS headers
+            $this->response->setHeader('Access-Control-Allow-Origin', 'http://localhost:3000')
+                ->setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS')
+                ->setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With')
+                ->setHeader('Access-Control-Allow-Credentials', 'true');
+
             return $this->response->setJSON([
                 'status' => 'success',
                 'data' => ['tokens' => $tokens]
             ]);
 
         } catch (\Exception $e) {
+            // Add CORS headers
+            $this->response->setHeader('Access-Control-Allow-Origin', 'http://localhost:3000')
+                ->setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS')
+                ->setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With')
+                ->setHeader('Access-Control-Allow-Credentials', 'true');
+                
             return $this->response->setJSON([
                 'status' => 'error',
                 'message' => 'Invalid refresh token'
@@ -253,7 +325,7 @@ class Auth extends BaseController
             mt_rand(0, 0xffff), mt_rand(0, 0xffff)
         );
     }
-    // In your AuthController or any controller
+    // Test database connection
     public function testDb()
     {
         try {
@@ -271,6 +343,12 @@ class Auth extends BaseController
             $db->table('users')->insert($testData);
             $insertId = $db->insertID();
             
+            // Add CORS headers
+            $this->response->setHeader('Access-Control-Allow-Origin', 'http://localhost:3000')
+                ->setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS')
+                ->setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With')
+                ->setHeader('Access-Control-Allow-Credentials', 'true');
+
             return $this->response->setJSON([
                 'status' => 'success',
                 'message' => 'Database connection OK',
@@ -280,6 +358,12 @@ class Auth extends BaseController
                 ]
             ]);
         } catch (\Exception $e) {
+            // Add CORS headers
+            $this->response->setHeader('Access-Control-Allow-Origin', 'http://localhost:3000')
+                ->setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS')
+                ->setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With')
+                ->setHeader('Access-Control-Allow-Credentials', 'true');
+                
             return $this->response->setJSON([
                 'status' => 'error',
                 'message' => 'Database error: ' . $e->getMessage()

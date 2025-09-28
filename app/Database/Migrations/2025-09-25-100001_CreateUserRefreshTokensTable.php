@@ -43,11 +43,11 @@ class CreateUserRefreshTokensTable extends Migration
         $this->forge->addKey('user_id');
         $this->forge->addKey('refresh_token');
         $this->forge->addForeignKey('user_id', 'users', 'user_id', 'CASCADE', 'CASCADE');
-        $this->forge->createTable('userrefreshtokens', true);
+$this->forge->createTable('user_refresh_tokens', true);
     }
 
     public function down()
     {
-        $this->forge->dropTable('userrefreshtokens', true);
+$this->forge->dropTable('user_refresh_tokens', true);
     }
 }

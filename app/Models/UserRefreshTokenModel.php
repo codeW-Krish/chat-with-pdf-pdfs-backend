@@ -6,7 +6,7 @@ use CodeIgniter\Model;
 
 class UserRefreshTokenModel extends Model
 {
-    protected $table            = 'userrefreshtokens';
+    protected $table            = 'user_refresh_tokens';
     protected $primaryKey       = 'token_id';
     protected $useAutoIncrement = false;
     protected $returnType       = 'array';
