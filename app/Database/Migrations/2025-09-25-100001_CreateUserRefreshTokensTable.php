@@ -17,10 +17,10 @@ class CreateUserRefreshTokensTable extends Migration
                 'type' => 'VARCHAR',
                 'constraint' => 36, // UUID length
             ],
-            'refresh_token' => [
-                'type' => 'VARCHAR',
-                'constraint' => 255,
-            ],
+'refresh_token' => [
+    'type' => 'VARCHAR',
+    'constraint' => 512,
+],
             'user_agent' => [
                 'type' => 'TEXT',
                 'null' => true,
