@@ -48,10 +48,19 @@ class PdfController extends BaseController
         }
 
         // Check file type
-        if ($pdfFile->getClientMimeType() !== 'application/pdf') {
+        $allowedMimes = [
+            'application/pdf',
+            'application/vnd.openxmlformats-officedocument.wordprocessingml.document', // .docx
+            'text/plain',
+            'text/csv',
+            'application/csv',
+            'application/vnd.openxmlformats-officedocument.presentationml.presentation' // .pptx
+        ];
+
+        if (!in_array($pdfFile->getClientMimeType(), $allowedMimes)) {
             return $this->response->setJSON([
                 'status' => 'error',
-                'message' => 'Only PDF files are allowed'
+                'message' => 'Invalid file type. Allowed types: PDF, DOCX, PPTX, TXT, CSV'
             ])->setStatusCode(400);
         }
 
@@ -255,6 +264,45 @@ class PdfController extends BaseController
             return $this->response->setJSON([
                 'status' => 'error',
                 'message' => 'Failed to get PDF status'
+            ])->setStatusCode(500);
+        }
+    }
+
+    public function viewPdf($pdfId)
+    {
+        try {
+            // Get user_id from JWT token
+            $userId = $this->request->user->user_id;
+
+            // Verify PDF belongs to user
+            $pdf = $this->pdfModel->getPdfById($pdfId, $userId);
+
+            if (!$pdf) {
+                return $this->response->setJSON([
+                    'status' => 'error',
+                    'message' => 'PDF not found or access denied'
+                ])->setStatusCode(404);
+            }
+
+            if (!file_exists($pdf->file_path)) {
+                return $this->response->setJSON([
+                    'status' => 'error',
+                    'message' => 'PDF file not found on server'
+                ])->setStatusCode(404);
+            }
+
+            // Set headers for PDF display
+            return $this->response
+                ->setHeader('Content-Type', 'application/pdf')
+                ->setHeader('Content-Disposition', 'inline; filename="' . $pdf->file_name . '"')
+                ->setHeader('Content-Length', (string) filesize($pdf->file_path))
+                ->setBody(file_get_contents($pdf->file_path));
+
+        } catch (\Exception $e) {
+            log_message('error', 'View PDF error: ' . $e->getMessage());
+            return $this->response->setJSON([
+                'status' => 'error',
+                'message' => 'Failed to view PDF'
             ])->setStatusCode(500);
         }
     }

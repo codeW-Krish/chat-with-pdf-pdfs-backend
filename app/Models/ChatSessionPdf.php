@@ -86,6 +86,15 @@ class ChatSessionPdf extends Model
         
         return true;
     }
+
+    public function removePdfFromSession($sessionId, $pdfId)
+    {
+        $db = \Config\Database::connect();
+        return $db->table('chat_session_pdfs')
+                  ->where('session_id', $sessionId)
+                  ->where('pdf_id', $pdfId)
+                  ->delete();
+    }
     
     public function getSessionPdfs($sessionId)
     {

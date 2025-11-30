@@ -397,4 +397,89 @@ log_message('info', 'Retrieved ' . count($sessions) . ' sessions');
         
         return $result;
     }
+    public function addPdfs($sessionId)
+    {
+        try {
+            $data = $this->request->getJSON(true);
+            $userId = $this->request->user->user_id;
+            $pdfIds = $data['pdf_ids'] ?? [];
+
+            if (empty($pdfIds)) {
+                return $this->response->setJSON([
+                    'status' => 'error',
+                    'message' => 'No PDFs provided'
+                ])->setStatusCode(400);
+            }
+
+            // Verify session belongs to user
+            $session = $this->chatSessionModel->where('session_id', $sessionId)
+                                             ->where('user_id', $userId)
+                                             ->first();
+            if (!$session) {
+                return $this->response->setJSON([
+                    'status' => 'error',
+                    'message' => 'Invalid session or access denied'
+                ])->setStatusCode(403);
+            }
+
+            // Validate PDFs belong to user
+            foreach ($pdfIds as $pdfId) {
+                $pdf = $this->pdfModel->getPdfById($pdfId, $userId);
+                if (!$pdf) {
+                    return $this->response->setJSON([
+                        'status' => 'error',
+                        'message' => 'Invalid PDF ID or access denied: ' . $pdfId
+                    ])->setStatusCode(400);
+                }
+            }
+
+            // Add PDFs to session
+            $this->chatSessionModel->addPdfsToSession($sessionId, $pdfIds);
+
+            return $this->response->setJSON([
+                'status' => 'success',
+                'message' => 'PDFs added to session successfully'
+            ]);
+
+        } catch (\Exception $e) {
+            log_message('error', 'Add PDFs to session error: ' . $e->getMessage());
+            return $this->response->setJSON([
+                'status' => 'error',
+                'message' => 'Failed to add PDFs to session'
+            ])->setStatusCode(500);
+        }
+    }
+
+    public function removePdf($sessionId, $pdfId)
+    {
+        try {
+            $userId = $this->request->user->user_id;
+
+            // Verify session belongs to user
+            $session = $this->chatSessionModel->where('session_id', $sessionId)
+                                             ->where('user_id', $userId)
+                                             ->first();
+            if (!$session) {
+                return $this->response->setJSON([
+                    'status' => 'error',
+                    'message' => 'Invalid session or access denied'
+                ])->setStatusCode(403);
+            }
+
+            // Remove PDF from session
+            $this->chatSessionModel->removePdfFromSession($sessionId, $pdfId);
+
+            return $this->response->setJSON([
+                'status' => 'success',
+                'message' => 'PDF removed from session successfully'
+            ]);
+
+        } catch (\Exception $e) {
+            log_message('error', 'Remove PDF from session error: ' . $e->getMessage());
+            return $this->response->setJSON([
+                'status' => 'error',
+                'message' => 'Failed to remove PDF from session'
+            ])->setStatusCode(500);
+        }
+    }
 }
