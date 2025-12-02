@@ -120,6 +120,7 @@ log_message('info', 'Retrieved ' . count($sessions) . ' sessions');
             
             $sessionId = $data['session_id'] ?? null;
             $message = $data['message'] ?? '';
+            $requestedPdfIds = $data['pdf_ids'] ?? null; // Optional: specific PDFs to use
             
             if (!$sessionId || !$message) {
                 return $this->response->setJSON([
@@ -141,13 +142,30 @@ log_message('info', 'Retrieved ' . count($sessions) . ' sessions');
             
             // Get PDFs in this session
             $sessionPdfs = $this->chatSessionModel->getSessionPdfs($sessionId);
-            $pdfIds = array_column($sessionPdfs, 'pdf_id');
+            $allSessionPdfIds = array_column($sessionPdfs, 'pdf_id');
             
-            if (empty($pdfIds)) {
+            if (empty($allSessionPdfIds)) {
                 return $this->response->setJSON([
                     'status' => 'error',
                     'message' => 'No PDFs in this session'
                 ])->setStatusCode(400);
+            }
+
+            // Filter PDFs if specific IDs requested
+            $pdfIds = [];
+            if ($requestedPdfIds !== null && is_array($requestedPdfIds)) {
+                // Only use requested IDs that are actually in the session
+                $pdfIds = array_intersect($requestedPdfIds, $allSessionPdfIds);
+                
+                // If intersection is empty but user requested IDs, it means invalid IDs were sent
+                // However, for better UX, if they deselected everything, we might want to handle that.
+                // But usually "chat with 0 docs" is just general chat or error. 
+                // Let's allow it but the AI might complain or just answer from general knowledge if supported.
+                // For now, if result is empty, we can either error or proceed with empty list.
+                // Let's proceed with empty list so AI knows no context is provided.
+            } else {
+                // Default to all session PDFs
+                $pdfIds = $allSessionPdfIds;
             }
             
             // Save user message
@@ -165,6 +183,7 @@ log_message('info', 'Retrieved ' . count($sessions) . ' sessions');
             $aiData = $aiResponse['data'] ?? $aiResponse; // Handle both response formats
             $references = $aiData['references'] ?? [];
             $aiAnswer = $aiData['answer'] ?? 'No response generated';
+            $suggestedQuestions = $aiData['suggested_questions'] ?? [];
             
             log_message('info', 'AI Answer: ' . $aiAnswer);
             log_message('info', 'References count: ' . count($references));
@@ -181,7 +200,8 @@ log_message('info', 'Retrieved ' . count($sessions) . ' sessions');
                 'data' => [
                     'user_message' => $message,
                     'ai_response' => $aiAnswer,
-                    'references' => $references
+                    'references' => $references,
+                    'suggested_questions' => $suggestedQuestions
                 ]
             ]);
             
@@ -190,6 +210,94 @@ log_message('info', 'Retrieved ' . count($sessions) . ' sessions');
             return $this->response->setJSON([
                 'status' => 'error',
                 'message' => 'Failed to send message: ' . $e->getMessage()
+            ])->setStatusCode(500);
+        }
+    }
+
+    public function generateSummary()
+    {
+        try {
+            $data = $this->request->getJSON(true);
+            $userId = $this->request->user->user_id;
+            $sessionId = $data['session_id'] ?? null;
+            
+            if (!$sessionId) {
+                return $this->response->setJSON([
+                    'status' => 'error',
+                    'message' => 'Session ID required'
+                ])->setStatusCode(400);
+            }
+            
+            // Verify session
+            $session = $this->chatSessionModel->where('session_id', $sessionId)
+                                             ->where('user_id', $userId)
+                                             ->first();
+            if (!$session) {
+                return $this->response->setJSON([
+                    'status' => 'error',
+                    'message' => 'Invalid session'
+                ])->setStatusCode(403);
+            }
+            
+            // Get PDFs
+            $sessionPdfs = $this->chatSessionModel->getSessionPdfs($sessionId);
+            $pdfIds = array_column($sessionPdfs, 'pdf_id');
+            
+            if (empty($pdfIds)) {
+                return $this->response->setJSON([
+                    'status' => 'error',
+                    'message' => 'No PDFs to summarize'
+                ])->setStatusCode(400);
+            }
+            
+            // Call Python service for summary
+            $pythonServerUrl = getenv('PYTHON_SERVER_URL') ?: 'http://localhost:5000';
+            
+            $postData = json_encode([
+                'pdf_ids' => $pdfIds,
+                'user_id' => $userId
+            ]);
+            
+            $ch = curl_init();
+            curl_setopt_array($ch, [
+                CURLOPT_URL => $pythonServerUrl . '/summarize',
+                CURLOPT_POST => true,
+                CURLOPT_POSTFIELDS => $postData,
+                CURLOPT_RETURNTRANSFER => true,
+                CURLOPT_TIMEOUT => 60,
+                CURLOPT_HTTPHEADER => ['Content-Type: application/json']
+            ]);
+            
+            $response = curl_exec($ch);
+            $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+            curl_close($ch);
+            
+            if ($httpCode !== 200) {
+                throw new \Exception('AI server error during summary generation');
+            }
+            
+            $result = json_decode($response, true);
+            $summary = $result['summary'] ?? 'Could not generate summary.';
+            
+            // Save summary as AI message
+            $this->chatMessageModel->addMessage(
+                $sessionId,
+                'ai',
+                "**Document Summary:**\n\n" . $summary
+            );
+            
+            return $this->response->setJSON([
+                'status' => 'success',
+                'data' => [
+                    'summary' => $summary
+                ]
+            ]);
+            
+        } catch (\Exception $e) {
+            log_message('error', 'Generate summary error: ' . $e->getMessage());
+            return $this->response->setJSON([
+                'status' => 'error',
+                'message' => 'Failed to generate summary'
             ])->setStatusCode(500);
         }
     }
@@ -337,7 +445,11 @@ log_message('info', 'Retrieved ' . count($sessions) . ' sessions');
     private function getConversationHistory($sessionId, $limit = 10)
     {
         try {
-            $messages = $this->chatMessageModel->getSessionMessages($sessionId, $limit);
+            $messages = $this->chatMessageModel->getLastMessages($sessionId, $limit);
+            
+            // Reverse to chronological order (oldest -> newest) for the AI context
+            $messages = array_reverse($messages);
+            
             $history = [];
             
             foreach ($messages as $message) {

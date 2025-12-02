@@ -13,11 +13,17 @@ class CorsFilter implements FilterInterface
     {
         $config = new CorsConfig();
         $cors = $config->default;
+        $origin = $request->getHeaderLine('Origin');
 
         // Handle preflight OPTIONS request
         if (strtoupper($request->getMethod()) === 'OPTIONS') {
             $response = Services::response();
-            $response->setHeader('Access-Control-Allow-Origin', implode(', ', $cors['allowedOrigins']));
+            
+            // Check if origin is allowed
+            if (in_array($origin, $cors['allowedOrigins'])) {
+                $response->setHeader('Access-Control-Allow-Origin', $origin);
+            }
+            
             $response->setHeader('Access-Control-Allow-Methods', implode(', ', $cors['allowedMethods']));
             $response->setHeader('Access-Control-Allow-Headers', implode(', ', $cors['allowedHeaders']));
             $response->setHeader('Access-Control-Allow-Credentials', $cors['supportsCredentials'] ? 'true' : 'false');
@@ -26,24 +32,20 @@ class CorsFilter implements FilterInterface
             return $response;
         }
 
-        // For normal requests, set CORS headers (after filter will also set them)
-        $response = Services::response();
-        $response->setHeader('Access-Control-Allow-Origin', implode(', ', $cors['allowedOrigins']));
-        $response->setHeader('Access-Control-Allow-Methods', implode(', ', $cors['allowedMethods']));
-        $response->setHeader('Access-Control-Allow-Headers', implode(', ', $cors['allowedHeaders']));
-        $response->setHeader('Access-Control-Allow-Credentials', $cors['supportsCredentials'] ? 'true' : 'false');
-
-        // Continue processing
         return $request;
     }
 
     public function after(RequestInterface $request, ResponseInterface $response, $arguments = null)
     {
-        // Ensure CORS headers are present on the response
         $config = new CorsConfig();
         $cors = $config->default;
+        $origin = $request->getHeaderLine('Origin');
 
-        $response->setHeader('Access-Control-Allow-Origin', implode(', ', $cors['allowedOrigins']));
+        // Check if origin is allowed
+        if (in_array($origin, $cors['allowedOrigins'])) {
+            $response->setHeader('Access-Control-Allow-Origin', $origin);
+        }
+
         $response->setHeader('Access-Control-Allow-Methods', implode(', ', $cors['allowedMethods']));
         $response->setHeader('Access-Control-Allow-Headers', implode(', ', $cors['allowedHeaders']));
         $response->setHeader('Access-Control-Allow-Credentials', $cors['supportsCredentials'] ? 'true' : 'false');

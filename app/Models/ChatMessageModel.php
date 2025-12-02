@@ -50,6 +50,13 @@ class ChatMessageModel extends Model
                    ->limit($limit)
                    ->findAll();
     }
+
+    public function getLastMessages($sessionId, $limit = 50){
+        return $this->where('session_id', $sessionId)
+                   ->orderBy('created_at', 'DESC')
+                   ->limit($limit)
+                   ->findAll();
+    }
     
     public function addMessage($sessionId, $sender, $messageText, $references = null){
         $messageId = $this->generateUuid();
